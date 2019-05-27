@@ -20,6 +20,17 @@ from sklearn.model_selection import GridSearchCV
 
 
 def load_data(database_filepath):
+
+    '''
+    Load data from database as dataframe
+    Input:
+        database_filepath: File path of sql database
+    Output:
+        X: Message data (features)
+        Y: Categories (target)
+        category_names: Labels for 36 categories
+    '''
+
     engine = create_engine('sqlite:///'+database_filepath)
     df = pd.read_sql_table('DisasterResponseTable',engine)
     X = df['message']
@@ -29,6 +40,15 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+
+    '''
+    Tokenize and clean text
+    Input:
+        text: original message text
+    Output:
+        tokens: Tokenized, cleaned, and lemmatized text
+    '''
+
     # Normalize Text
     text=text.lower()
     #Removing punctutaions
@@ -39,23 +59,42 @@ def tokenize(text):
     tokens=[w for w in tokens if w not in stopwords.words('english')]
     #Lemmatization
     tokens=[WordNetLemmatizer().lemmatize(w).strip() for w in tokens]
-    
+
     return tokens
-    
+
 
 
 def build_model():
+
+    '''
+    Build a ML pipeline using tfidf, random forest, and gridsearch
+    Input: None
+    Output:
+        Results of GridSearchCV
+    '''
+
     pipeline = Pipeline([('vect',CountVectorizer(tokenizer=tokenize)),
                      ('tfidf',TfidfTransformer()),
                      ('clf',MultiOutputClassifier(RandomForestClassifier()))])
-    
-    parameters ={'clf__estimator__n_estimators': [2,4]} 
+
+    parameters ={'clf__estimator__n_estimators': [2,4]}
     cv = GridSearchCV(pipeline,param_grid=parameters,n_jobs=-1,verbose=2)
-    
+
     return cv
 
 
 def evaluate_model(model, X_test, Y_test,category_names):
+
+    '''
+    Evaluate model performance using test data
+    Input:
+        model: Model to be evaluated
+        X_test: Test data (features)
+        Y_test: True lables for Test data
+        category_names: Labels for 36 categories
+    Output:
+        Print accuracy and classfication report for each category
+    '''
     Y_pred=model.predict(X_test)
     for i in range(len(category_names)):
         print("Category:", category_names[i],"\n", classification_report(Y_test.iloc[:, i].values, Y_pred[:, i]))
@@ -66,8 +105,18 @@ def evaluate_model(model, X_test, Y_test,category_names):
 
 
 def save_model(model, model_filepath):
+
+    '''
+    Save model as a pickle file
+    Input:
+        model: Model to be saved
+        model_filepath: path of the output pick file
+    Output:
+        A pickle file of saved model
+    '''
+    
     pickle.dump(model,open(model_filepath,'wb'))
-   
+
 
 
 def main():
@@ -76,13 +125,13 @@ def main():
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
-        
+
         print('Building model...')
         model = build_model()
-        
+
         print('Training model...')
         model.fit(X_train, Y_train)
-        
+
         print('Evaluating model...')
         evaluate_model(model, X_test, Y_test, category_names)
 

@@ -4,22 +4,41 @@ import numpy as np
 from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
+
+    '''
+    Input:
+        messages_filepath: File path of messages data
+        categories_filepath: File path of categories data
+    Output:
+        df: Merged dataset from messages and categories
+    '''
+
+
     messages = pd.read_csv(messages_filepath)
-    categories =pd.read_csv(categories_filepath) 
-    df =pd.merge(messages,categories,on='id') 
-    
+    categories =pd.read_csv(categories_filepath)
+    df =pd.merge(messages,categories,on='id')
+
     return df
 
 
 def clean_data(df):
+
+    '''
+    Input:
+        df: Merged dataset from messages and categories
+    Output:
+        df: Cleaned dataset
+    '''
+
+
     # create a dataframe of the 36 individual category columns
     categories = df['categories'].str.split(pat=';',expand=True)
-    
+
     # select the first row of the categories dataframe
     row = categories.iloc[0]
     category_colnames = row.apply(lambda x:x[:-2])
     categories.columns = category_colnames
-    
+
     #Convert category values to just numbers 0 or 1
     for column in categories:
         # set each value to be the last character of the string
@@ -27,23 +46,34 @@ def clean_data(df):
 
         # convert column from string to numeric
         categories[column] = pd.to_numeric(categories[column])
-    
+
     # drop the original categories column from `df`
     df.drop('categories',axis=1,inplace=True)
-    
+
     # concatenate the original dataframe with the new `categories` dataframe
     df = pd.concat([df,categories],axis=1)
-    
+
     # drop duplicates
     df.drop_duplicates(inplace=True)
-    
+
     return df
 
 
 def save_data(df, database_filename):
+
+    '''
+    Save df into sqlite db
+    Input:
+        df: cleaned dataset
+        database_filename: database name, e.g. DisasterMessages.db
+    Output:
+        A SQLite database
+    '''
+
+
     engine = create_engine('sqlite:///'+database_filename)
     df.to_sql('DisasterResponseTable', engine, index=False)
-    
+
 
 
 def main():
@@ -57,12 +87,12 @@ def main():
 
         print('Cleaning data...')
         df = clean_data(df)
-        
+
         print('Saving data...\n    DATABASE: {}'.format(database_filepath))
         save_data(df, database_filepath)
-        
+
         print('Cleaned data saved to database!')
-    
+
     else:
         print('Please provide the filepaths of the messages and categories '\
               'datasets as the first and second argument respectively, as '\
